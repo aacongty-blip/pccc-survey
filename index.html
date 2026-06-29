@@ -676,6 +676,10 @@ async function openProject(id){
     if(!proj.info.addr){ proj.info.addr = { street: proj.info.diachi||"", provCode:"", wardCode:"" }; }
     if("diachi" in proj.info) delete proj.info.diachi;
   }
+  // Firebase không lưu object rỗng {} — đảm bảo các field luôn tồn tại
+  if(!proj.checklist) proj.checklist = {};
+  if(!proj.chosen)    proj.chosen    = {};
+  if(!proj.sumNotes)  proj.sumNotes  = {};
   current = proj;
   document.getElementById("welcomeView").style.display="none";
   document.getElementById("workspace").style.display="flex";
@@ -692,6 +696,9 @@ async function openProject(id){
     if(!val || !current || current.id !== id) return;
     // Chỉ cập nhật nếu máy khác thay đổi (updated mới hơn)
     if(val.updated && val.updated > current.updated){
+      if(!val.checklist) val.checklist = {};
+      if(!val.chosen)    val.chosen    = {};
+      if(!val.sumNotes)  val.sumNotes  = {};
       current = val;
       renderAll();
       markSaved();
