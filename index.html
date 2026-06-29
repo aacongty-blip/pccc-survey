@@ -658,11 +658,17 @@ async function createProject(){
   projects.push({id,name,addr,updated:proj.updated,counts:computeCounts(proj)});
   await dbSet(PATH_INDEX, projects);
   closeModal("modalNew");
-  openProject(id);
+  await openProject(id);
   toast("Đã tạo dự án mới","ok");
 }
 
+let _currentListener = null; // realtime listener cho dự án đang mở
+
 async function openProject(id){
+  // Hủy listener cũ nếu có
+  if(_currentListener){ _currentListener(); _currentListener = null; }
+
+  // Đọc lần đầu
   const proj = await dbGet(PATH_PROJ(id));
   if(!proj){ toast("Không mở được dự án","warn"); return; }
   // migrate legacy address (text) -> structured addr
@@ -680,6 +686,17 @@ async function openProject(id){
   switchTab("info");
   renderAll();
   markSaved();
+
+  // Lắng nghe realtime — cập nhật khi máy khác sửa dự án này
+  _currentListener = dbListen(PATH_PROJ(id), (val) => {
+    if(!val || !current || current.id !== id) return;
+    // Chỉ cập nhật nếu máy khác thay đổi (updated mới hơn)
+    if(val.updated && val.updated > current.updated){
+      current = val;
+      renderAll();
+      markSaved();
+    }
+  });
 }
 
 function askDelete(id){
