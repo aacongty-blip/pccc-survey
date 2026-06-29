@@ -639,8 +639,7 @@ async function restoreData(e){
         toast("File không đúng định dạng backup PCCC"); return;
       }
       // Xác nhận trước khi ghi đè
-      if(!confirm("Khôi phục sẽ GHI ĐÈ toàn bộ dữ liệu hiện tại trên Firebase.
-Bạn chắc chắn muốn tiếp tục?")) return;
+      if(!confirm("Khôi phục sẽ GHI ĐÈ toàn bộ dữ liệu hiện tại trên Firebase.\nBạn chắc chắn muốn tiếp tục?")) return;
 
       toast("Đang khôi phục…");
       await window.__db.ref('pccc').set(data);
