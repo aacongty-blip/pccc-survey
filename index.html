@@ -744,6 +744,7 @@ async function createProject(){
 }
 
 let _currentListener = null; // realtime listener cho dự án đang mở
+let _isSaving = false;        // chặn listener khi đang lưu
 
 async function openProject(id){
   // Hủy listener cũ nếu có
@@ -761,6 +762,10 @@ async function openProject(id){
   if(!proj.checklist) proj.checklist = {};
   if(!proj.chosen)    proj.chosen    = {};
   if(!proj.sumNotes)  proj.sumNotes  = {};
+  // Xóa sentinel _keep nếu có
+  delete proj.checklist._keep;
+  delete proj.chosen._keep;
+  delete proj.sumNotes._keep;
   current = proj;
   document.getElementById("welcomeView").style.display="none";
   document.getElementById("workspace").style.display="flex";
@@ -775,11 +780,15 @@ async function openProject(id){
   // Lắng nghe realtime — cập nhật khi máy khác sửa dự án này
   _currentListener = dbListen(PATH_PROJ(id), (val) => {
     if(!val || !current || current.id !== id) return;
+    if(_isSaving) return; // bỏ qua — chính máy này đang lưu
     // Chỉ cập nhật nếu máy khác thay đổi (updated mới hơn)
     if(val.updated && val.updated > current.updated){
       if(!val.checklist) val.checklist = {};
       if(!val.chosen)    val.chosen    = {};
       if(!val.sumNotes)  val.sumNotes  = {};
+      delete val.checklist._keep;
+      delete val.chosen._keep;
+      delete val.sumNotes._keep;
       current = val;
       renderAll();
       markSaved();
@@ -1299,12 +1308,19 @@ function scheduleSave(){
 }
 async function saveNow(manual){
   if(!current) return;
+  _isSaving = true;
   current.updated = Date.now();
+  // Đảm bảo Firebase không xóa các field rỗng
+  if(!current.checklist) current.checklist = {"_keep":true};
+  if(!current.chosen)    current.chosen    = {"_keep":true};
+  if(!current.sumNotes)  current.sumNotes  = {"_keep":true};
   await dbSet(PATH_PROJ(current.id), current);
   syncProjMeta();
   await dbSet(PATH_INDEX, projects);
   markSaved();
   if(manual) toast("Đã lưu dự án","ok");
+  // Cho listener 1 giây yên tĩnh sau khi lưu xong
+  setTimeout(() => { _isSaving = false; }, 1000);
 }
 function syncProjMeta(){
   const m = projects.find(p=>p.id===current.id);
